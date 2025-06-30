@@ -40,6 +40,9 @@ class ThreadSocket(QThread):
     """
     signal_message = Signal(str) 
     def __init__(self, name):
+           """Inicializa el socket y conecta al servidor.
+        Args:
+            name (str): Nombre del usuario para registrar en el servidor."""
         super().__init__()
         self.connected = False
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -52,6 +55,9 @@ class ThreadSocket(QThread):
             self.connected = False
 
     def run(self):
+        """Escucha mensajes entrantes del servidor continuamente.
+        Emite señal signal_message con cada mensaje recibido."""
+
         try:
             while self.connected:
                 message = self.server.recv(BUFFER_SIZE)
@@ -67,6 +73,7 @@ class ThreadSocket(QThread):
             self.connected = False
 
     def stop(self):
+        """Detiene el hilo y cierra la conexión limpiamente."""
         self.connected = False
         self.wait()
 
@@ -81,6 +88,7 @@ class MainWindow(QMainWindow, Ui_SMS):
     Continue: Oculta la ventana actual y muestra la de login.
     """
     def __init__(self, *args, **kwargs):
+        """Configura la interfaz principal con botón de inicio."""
         QMainWindow.__init__(self, *args, **kwargs)
         self.setupUi(self)
         self.setFixedSize(self.width(), self.height())
@@ -88,6 +96,7 @@ class MainWindow(QMainWindow, Ui_SMS):
         self.setWindowTitle("SMS - Desconectado")
     
     def Continue(self):
+        """Oculta esta ventana y muestra el login."""
         self.hide()
         login = LoginWindow(self)
         login.show()       
@@ -105,6 +114,7 @@ class LoginWindow(QDialog, Ui_Login):
     ChangePhototobackward: Muestra la anterior imagen guardada para el registro del usuario
     """
     def __init__(self, parent=None):
+        """Prepara campos de nombre y selector de avatar."""
         super().__init__(parent)
         self.setupUi(self)
         self.setWindowTitle("SMS - Login")
@@ -115,6 +125,7 @@ class LoginWindow(QDialog, Ui_Login):
         self.SaveLogin.clicked.connect(self.Continuar)
 
     def Continuar(self):
+        """Valida el nombre ingresado y abre el menú principal."""
         name = self.txtNameUsuario.text()
         photoIndex = self.current_index
         if name != "":
@@ -126,11 +137,13 @@ class LoginWindow(QDialog, Ui_Login):
             self.txtNameUsuario.setPlaceholderText("Ingrese un nombre de usuario")
       
     def ChangePhototoward(self):
+        """Cambia al siguiente avatar disponible."""
         new_index = (self.current_index + 1) % len(Photos)
         self.photo.setPixmap(QPixmap(Photos[new_index]))
         self.current_index = new_index
 
     def ChangePhototobackward(self):
+        """Cambia al avatar anterior."""
         new_index = (self.current_index - 1) % len(Photos)
         self.photo.setPixmap(QPixmap(Photos[new_index]))
         self.current_index = new_index
@@ -157,6 +170,7 @@ class MenuWindow(QDialog, Ui_Menu):
         ExitProgram(): Cierra la conexión al servidor y termina la aplicación.    
     """
     def __init__(self, parent=None, user=None, photoIndex=None):
+        """Configura el menú con avatar y nombre del usuario."""
         super().__init__(parent)
         self.setupUi(self)
         self.setWindowTitle("SMS - Menú")
@@ -177,21 +191,25 @@ class MenuWindow(QDialog, Ui_Menu):
         self.coneccion.signal_message.connect(self.handle_global_message)
 
     def ForoClicked(self):
+         """Abre el chat público (foro)."""
         self.hide()
         self.chat = ForoWindow(self, self.NameUser, self.photoI, self.coneccion)
         self.chat.show()
 
     def PersonalChatClicked(self):
+        """Abre la ventana de chats privados."""
         self.hide()
         self.personalChat = PersonalChatWindow(self, self.NameUser, self.coneccion)
         self.personalChat.show()
         
     def IoTClicked(self):
+        """Muestra los controles para dispositivos IoT en este caso el coche."""
         self.hide()
         self.IoT = ESP32Activities(self,self.NameUser,self.coneccion)
         self.IoT.show()    
 
     def ExitProgram(self):
+        """Cierra la conexión y termina la aplicación."""
         self.coneccion.server.close()
         self.coneccion.stop()
         sys.exit(0)
@@ -202,15 +220,20 @@ class MenuWindow(QDialog, Ui_Menu):
         #self.chess_dialog.show()
         
     def gatoClicked(self):
+        """Inicia el juego del Gato en línea."""
         self.hide()
         self.gato_dialog = GatoInitialGame(self, self.NameUser, self.coneccion)
         self.gato_dialog.show()
         
     def abrir_alimentador(self):
+        """Abre el control del alimentador automático."""
         self.alimentador = AlimentadorApp(self.coneccion, self)
         self.alimentador.show()
         
     def handle_global_message(self, mensaje):
+        """Procesa mensajes globales del servidor.
+        Args:
+            mensaje (str): Mensaje recibido con formato específico."""
         if mensaje.startswith("<gato_accept>"):
             rival = mensaje.replace("<gato_accept>", "").strip()
 
@@ -240,6 +263,7 @@ class ForoWindow(QDialog, Ui_Chat):
         ReturnToMenu(): Cierra la ventana del foro y retorna a la ventana del menú principal.
     """
     def __init__(self, parent=MenuWindow, user=None, photoIndex=None, conneccion = None ):
+         """Configura el chat con nombre y avatar del usuario."""
         super().__init__(parent)
         self.setupUi(self)
         self.setWindowTitle(f"SMS - Conectado: {user}")
@@ -257,6 +281,7 @@ class ForoWindow(QDialog, Ui_Chat):
         self.coneccion.start()       
         
     def mensaje_saliente(self):
+        """Envía mensaje al servidor con formato <all>."""
         # Enviar mensaje al servidor
         str = self.lineEdit.text()
         if str != "":
@@ -265,6 +290,7 @@ class ForoWindow(QDialog, Ui_Chat):
             self.textEdit.setPlainText(self.textEdit.toPlainText() + "<Tú> " + str + '\n')
 
     def mensage_entrante(self, mensaje):
+         """Muestra mensajes recibidos con formato <all>."""
         if mensaje.startswith('<all>'):
             text=mensaje.removeprefix('<all>')
             # Mostrar mensaje entrante en el QTextEdit
@@ -272,6 +298,7 @@ class ForoWindow(QDialog, Ui_Chat):
             self.textEdit.verticalScrollBar().setValue(self.textEdit.verticalScrollBar().maximum())
 
     def ReturnToMenu(self):
+         """Regresa al menú principal."""
         # Detener el hilo y cerrar la conexión
         self.close()
         self.parent().show()
@@ -296,6 +323,7 @@ class PersonalChatWindow(QDialog, Ui_PersonalChat):
         return_to_menu(): Cierra esta ventana y regresa al menú principal.
     """
     def __init__(self, parent=MenuWindow, user=None, conneccion=None):
+        """Muestra usuarios conectados y grupos disponibles."""
         super().__init__(parent)
         self.nameUser = user
         self.setupUi(self)
@@ -318,10 +346,12 @@ class PersonalChatWindow(QDialog, Ui_PersonalChat):
         self.coneccion.start()
 
     def mensaje_getList_of_clients(self):
+        """Solicita lista de usuarios al servidor."""
         # Enviar solicitud al servidor para obtener la lista de clientes
         self.coneccion.server.send(bytes("<get_clients>", 'utf-8'))
     
     def List_of_clients(self, mensaje):
+         """Actualiza la lista de contactos conectados."""
         if mensaje.startswith('<get_clients>'):
             msg = mensaje.removeprefix('<get_clients>')
             if msg == self.nameUser:
@@ -346,6 +376,7 @@ class PersonalChatWindow(QDialog, Ui_PersonalChat):
                     self.UserList.addItem("No hay clientes conectados")     
 
     def ItemClicked(self, item):
+        """Abre chat al seleccionar un contacto/grupo."""
         self.select_name = item.text()
         if self.select_name.startswith('Grupo: '):
             name = self.select_name.removeprefix('Grupo: ')
@@ -359,6 +390,7 @@ class PersonalChatWindow(QDialog, Ui_PersonalChat):
             self.chat.show()
     
     def groupclicked(self):
+         """Abre ventana para crear nuevo grupo."""
         if self.flag_no_group == 1 :
             QMessageBox.warning(self, "Error", "No hay usuarios conectados")
         else:
@@ -366,6 +398,7 @@ class PersonalChatWindow(QDialog, Ui_PersonalChat):
             self.group_window.show()
         
     def CreateGroup(self, mensaje):
+        """Procesa datos de nuevos grupos recibidos."""
         if mensaje.startswith('<group>'):
             # <group>Nombre del grupo,index de imagen<Integrants>Nombre1,Nombre2,Nombre3
             # Da el nombre del grupo y el index del icono
@@ -383,6 +416,7 @@ class PersonalChatWindow(QDialog, Ui_PersonalChat):
             self.UserList.addItem(item)    
     
     def return_to_menu(self):
+        """Regresa al menú principal."""
         self.close()
         self.parent().show()
 
@@ -409,6 +443,7 @@ class GroupWindow(QDialog, Ui_Creacion_de_Grupo):
     """
 
     def __init__(self, parent=PersonalChatWindow, user=None, conneccion=None):
+        """Prepara interfaz con lista de usuarios."""
         super().__init__(parent)
         self.nameUser=user
         self.setupUi(self)
@@ -436,6 +471,7 @@ class GroupWindow(QDialog, Ui_Creacion_de_Grupo):
         self.coneccion.server.send(bytes("<get_clients>", 'utf-8'))
 
     def mostrar_usuarios(self, mensaje):
+        """Muestra usuarios disponibles para agregar."""
         if mensaje.startswith("<get_clients>"):
             msg = mensaje.removeprefix("<get_clients>")
             clientes = [c.strip() for c in msg.split(",")]
@@ -447,6 +483,7 @@ class GroupWindow(QDialog, Ui_Creacion_de_Grupo):
                 self.UsersConectedList.addItem(item)
     
     def SelectedUser(self,item):
+         """Agrega usuario seleccionado al grupo."""
         self.select_name = item.text()
         if self.select_name == "No hay clientes conectados":
             self.SelectedUsersList.setText(self.select_name)
@@ -457,11 +494,13 @@ class GroupWindow(QDialog, Ui_Creacion_de_Grupo):
             self.SelectedUsersList.setText(self.SelectedUsersList.toPlainText() + text)
 
     def DeleteUser(self):
+        """Elimina usuario de la lista del grupo."""
         name = self.DeleteUserText.text()
         self.UsersSelected.remove(name)
         self.DeleteUserText.clear()
 
     def confirmar(self):
+        """Envía datos del grupo al servidor."""
         name = f'{self.NameGroup.text()},{self.current_index}'
         self.NameGroup.clear()
         if name != "":
@@ -475,16 +514,19 @@ class GroupWindow(QDialog, Ui_Creacion_de_Grupo):
             self.NameGroup.setPlaceholderText("Ingrese un nombre")
 
     def Prev(self):
+        """Muestra imagen anterior para el grupo."""
         new_index = (self.current_index + 1) % len(Group_Photos)
         self.Img_g.setPixmap(QPixmap(Group_Photos[new_index]))
         self.current_index = new_index
 
     def Next(self):
+        """Muestra siguiente imagen para el grupo."""
         new_index = (self.current_index + 1) % len(Group_Photos)
         self.Img_g.setPixmap(QPixmap(Group_Photos[new_index]))
         self.current_index = new_index
 
     def cancelar(self):
+         """Cierra sin crear el grupo."""
         self.close()
         self.parent().show()
 
@@ -504,6 +546,7 @@ class Chat(QDialog,Ui_Chat):
         mensage_entrante(mensaje): Recibe y muestra mensajes entrantes desde el servidor.
     """
     def __init__(self, parent=PersonalChatWindow, user=None, photoIndex=None, conneccion = None ):
+        """Configura chat con nombre y avatar del contacto."""
         super().__init__(parent)
         self.setupUi(self)
         self.setWindowTitle(f"Chat - Conectado: {user}")
@@ -521,10 +564,12 @@ class Chat(QDialog,Ui_Chat):
         self.coneccion.start()
      
     def ReturnToContacts(self):
+        """Regresa a la lista de contactos."""
         self.hide()
         self.parent().show()   
         
     def mensaje_saliente(self):
+        """Envía mensaje privado con formato <only_to>."""
         # Enviar mensaje al servidor
         # <only_to>Nombre del cliente<text> - Envía un mensaje solo a un cliente específico
         str = self.lineEdit.text()
@@ -534,6 +579,7 @@ class Chat(QDialog,Ui_Chat):
             self.textEdit.setPlainText(self.textEdit.toPlainText() + "<Tú> " + str + '\n')
     
     def mensage_entrante(self, mensaje):
+         """Muestra mensajes privados recibidos."""
         if mensaje.startswith('<only_to>'):
             text = mensaje.removeprefix('<only_to>')
         # Mostrar mensaje entrante en el QTextEdit
@@ -577,6 +623,7 @@ class GroupChat(QDialog, Ui_Chat):
         self.parent().show()   
         
     def mensaje_saliente(self):
+         """Envía mensaje a todos los miembros del grupo."""
         # Enviar mensaje al servidor
         # <some_people>Nombre del cliente<text> - Envía un mensaje solo a un cliente específico
         str = self.lineEdit.text()
@@ -587,6 +634,7 @@ class GroupChat(QDialog, Ui_Chat):
                 self.textEdit.setPlainText(self.textEdit.toPlainText() + "<Tú> " + str + '\n')
     
     def mensage_entrante(self, mensaje):
+        """Muestra mensajes grupales recibidos."""
         if mensaje.startswith('<some_people>'):
             text=mensaje.removeprefix('<some_people>')
             # Mostrar mensaje entrante en el QTextEdit
@@ -614,6 +662,7 @@ class ESP32Activities(QDialog, Ui_On_Off):
         Pitar(): Envía el comando para activar el claxon.
     """
     def __init__(self, parent=MenuWindow, user=None, conneccion = None ):
+        """Configura interfaz de controles IoT."""
         super().__init__(parent)
         self.setupUi(self)
         self.setWindowTitle(f"ESP32 - Conectado: {user}")
@@ -636,12 +685,14 @@ class ESP32Activities(QDialog, Ui_On_Off):
         self.parent().show()
         
     def ChargeOn(self):
+        """Envía comando 'LEDS_ON' al ESP32."""
         self.coneccion.server.send(bytes("<conection_ESP32>ESP32<text>LEDS_ON", 'utf-8'))
     
     def ChargeOff(self):
         self.coneccion.server.send(bytes("<conection_ESP32>ESP32<text>LEDS_OFF", 'utf-8'))
         
     def Forward(self):
+        """Envía comando 'Forward' para movimiento."""
         self.coneccion.server.send(bytes("<conection_ESP32>ESP32<text>Forward", 'utf-8'))
         
     def Backward(self):
@@ -657,6 +708,7 @@ class ESP32Activities(QDialog, Ui_On_Off):
         #self.coneccion.server.send(bytes("<conection_ESP32>ESP32<text>Stop", 'utf-8'))
     
     def Pitar(self):
+        """Envía comando 'Claxon' al ESP32."""
         self.coneccion.server.send(bytes("<conection_ESP32>ESP32<text>Claxon",'utf-8'))
             
 class GatoInitialGame(QDialog, Ui_PersonalChat):
@@ -679,6 +731,7 @@ class GatoInitialGame(QDialog, Ui_PersonalChat):
         returnToMenu(): Cierra la ventana actual y regresa al menú principal.
     """
     def __init__(self, parent=MenuWindow, user=None, conneccion=None):
+         """Muestra lista de usuarios para invitar."""
         super().__init__(parent)
         self.nameUser = user
         self.setupUi(self)
@@ -723,6 +776,7 @@ class GatoInitialGame(QDialog, Ui_PersonalChat):
                     self.UserList.addItem("No hay clientes conectados")
 
     def ItemClicked(self, item):
+        """Envía invitación al usuario seleccionado."""
         text = item.text()
         if text in ["Clientes conectados:", "No hay clientes conectados"]:
             return
@@ -770,6 +824,7 @@ class GatoInitialGame(QDialog, Ui_PersonalChat):
             self.start_gato_game(self.nameUser, rival, is_X=False)
 
     def start_gato_game(self, user, rival, is_X):
+        """Inicia partida con configuración de jugadores."""
         self.partida = GatoOnline(self.coneccion, jugador=user, oponente=rival, soy_X=is_X)
         self.hide()
         self.partida.show()
@@ -814,6 +869,7 @@ class AlimentadorApp(QDialog):
         eliminar_horario(): Elimina uno o más horarios seleccionados.
     """    
     def __init__(self, conneccion, parent=None):
+        """Configura interfaz con temporizadores y GIFs."""
         super().__init__(parent)
 
         # Variables estado
@@ -978,6 +1034,7 @@ class AlimentadorApp(QDialog):
 
 
     def iniciar_alimentacion_manual(self):
+        """Activa alimentación inmediata."""
         if self.alimentacion_activa:
             print("Alimentación ya está activa")
             return
@@ -1094,6 +1151,7 @@ class AlimentadorApp(QDialog):
         self.timer_comiendo.start(10000)
         
     def mostrar_animacion(self, estado):
+         """Cambia GIF según estado (comiendo/esperando/feliz)."""
         if estado == "comiendo":
             self.lbl_animacion.setMovie(self.gif_comiendo)
             self.gif_comiendo.start()
@@ -1109,6 +1167,7 @@ class AlimentadorApp(QDialog):
         self.ui_widget.findChild(QWidget, "frame_programacion").setVisible(not visible)
         
     def verificar_horarios(self):
+        """Compara hora actual con horarios programados."""
         hora_actual = QTime.currentTime().toString("hh:mm ap")
         lista = self.ui_widget.findChild(QListWidget, "list_horarios")
         for i in range(lista.count()):
@@ -1116,6 +1175,7 @@ class AlimentadorApp(QDialog):
                 self.iniciar_alimentacion_programada()
                 break       
     def agregar_horario(self):
+         """Añade nuevo horario programado."""
         time_edit = self.ui_widget.findChild(QTimeEdit, "time_edit")
         list_horarios = self.ui_widget.findChild(QListWidget, "list_horarios")
         hora = time_edit.time().toString("hh:mm ap")
