@@ -50,7 +50,10 @@ class ThreadSocket(QThread):
         except Exception as e:
             print(f"Error al conectar: {e}")
             self.connected = False
-
+    """
+    Su propósito es simple Inicializa el hilo de conexión que tiene con el servidor,también crea un socket TCP/IP,
+    en la que intenta conectar al servidor "18.119.164.44" envía el nombre del usuario al servidor si la conexión es exitosa.
+    """
     def run(self):
         try:
             while self.connected:
@@ -65,11 +68,16 @@ class ThreadSocket(QThread):
         finally:
             self.server.close()
             self.connected = False
-
+    """
+    Su propósito es sencillo escucha mensajes del servidor en segundo plano emite una señal con cada mensaje 
+    recibido si hay un error o desconexión notifica mediante esta señal
+    """
     def stop(self):
         self.connected = False
         self.wait()
-
+    """
+    solo detiene el hilo de conexión de forma segura cerrando el socket y esperando a q el hilo termine
+    """
 class MainWindow(QMainWindow, Ui_SMS):
     """
     Ventana principal de la aplicación
